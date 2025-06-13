@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySQL数据库查询智能体</title>
+    <script src="./js/marked.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #6c8fc7;
+            --success-color: #28a745;
+            --light-gray: #f8f9fa;
+            --dark-gray: #343a40;
+            --border-color: #dee2e6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin-top: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .card.collapsed {
+            padding: 15px 25px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            gap: 10px;
+        }
+
+        #connectionStatus {
+            margin-left: 10px; /* 调整与标题的距离 */
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--dark-gray);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.2);
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 15px -10px;
+        }
+
+        .form-col {
+            flex: 1;
+            padding: 0 10px;
+            min-width: 200px;
+        }
+
+        .btn {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .query-section {
+            display: flex;
+            flex-direction: column;
+            height: 150px;
+        }
+
+        .query-input {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        textarea {
+            width: 100%;
+            flex: 1;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            resize: none;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.2);
+        }
+
+        .query-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .result-container {
+            margin-top: 20px;
+        }
+
+        .result-box {
+            background-color: var(--light-gray);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 15px;
+            min-height: 150px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-style: italic;
+            color: #6c757d;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(74, 111, 165, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .test-connection {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .connection-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .toggle-icon {
+            transition: transform 0.3s;
+            margin-left: auto;
+        }
+
+        .collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .collapsed .card-content {
+            display: none;
+        }
+
+        .processing {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>MySQL数据库查询智能体</h1>
+
+    <div class="card" id="dbConfigCard">
+        <div class="card-header" id="dbConfigHeader">
+            <h2 style="margin-bottom: 0;">数据库连接配置</h2>
+            <span id="connectionStatus" class="connection-status disconnected">未连接</span>
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="card-content">
+            <form id="dbConfigForm">
+                <div class="form-row">
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="host">主机地址</label>
+                            <input type="text" id="host" placeholder="例如: localhost 或 127.0.0.1" required>
+                        </div>
+                    </div>
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="port">端口</label>
+                            <input type="number" id="port" placeholder="例如: 3306" required>
+                        </div>
+                    </div>
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="dbName">数据库名称</label>
+                            <input type="text" id="dbName" placeholder="要连接的数据库名称" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="username">用户名</label>
+                            <input type="text" id="username" placeholder="数据库用户名" required>
+                        </div>
+                    </div>
+                    <div class="form-col">
+                        <div class="form-group">
+                            <label for="password">密码</label>
+                            <input type="password" id="password" placeholder="数据库密码">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="test-connection">
+                    <button type="button" id="testConnectionBtn" class="btn btn-primary">测试连接</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>查询面板</h2>
+        <div class="query-section">
+            <div class="query-input">
+                <textarea id="queryInput" placeholder="输入您的问题..." rows="5"></textarea>
+                <div class="query-actions">
+                    <button id="sendQueryBtn" class="btn btn-success" disabled>发送查询</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-container">
+            <h2>查询结果</h2>
+            <div id="resultBox" class="result-box">
+                <p>查询结果将显示在这里...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 获取DOM元素
+        const dbConfigCard = document.getElementById('dbConfigCard');
+        const dbConfigHeader = document.getElementById('dbConfigHeader');
+        const testConnectionBtn = document.getElementById('testConnectionBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const queryInput = document.getElementById('queryInput');
+        const sendQueryBtn = document.getElementById('sendQueryBtn');
+        const resultBox = document.getElementById('resultBox');
+
+
+        // 连接配置卡片折叠/展开功能
+        dbConfigHeader.addEventListener('click', function () {
+            dbConfigCard.classList.toggle('collapsed');
+        });
+
+        // 当查询输入框有内容时启用发送按钮
+        queryInput.addEventListener('input', function () {
+            sendQueryBtn.disabled = !queryInput.value.trim();
+        });
+
+        // 测试数据库连接
+        testConnectionBtn.addEventListener('click', async function () {
+            const host = document.getElementById('host').value;
+            const port = document.getElementById('port').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const dbName = document.getElementById('dbName').value;
+
+            if (!host || !port || !username || !dbName) {
+                alert('请填写所有字段');
+                return;
+            }
+
+            testConnectionBtn.disabled = true;
+            testConnectionBtn.innerHTML = '<span class="loading"></span>正在连接...';
+            connectionStatus.textContent = '连接中...';
+            connectionStatus.className = 'connection-status';
+
+            try {
+                const response = await fetch('/api/connect', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        host: host,
+                        port: port,
+                        username: username,
+                        password: password,
+                        dbName: dbName,
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    connectionStatus.textContent = '连接成功';
+                    connectionStatus.className = 'connection-status connected';
+                    // 连接成功后自动折叠配置卡片
+                    dbConfigCard.classList.add('collapsed');
+                } else {
+                    connectionStatus.textContent = '连接失败: ' + (data.message || '未知错误');
+                    connectionStatus.className = 'connection-status disconnected';
+                }
+            } catch (error) {
+                console.error('连接测试失败:', error);
+                connectionStatus.textContent = '连接失败: ' + error.message;
+                connectionStatus.className = 'connection-status disconnected';
+            } finally {
+                testConnectionBtn.disabled = false;
+                testConnectionBtn.textContent = '测试连接';
+            }
+        });
+
+        // 显示处理中的状态
+        function showProcessing() {
+            resultBox.innerHTML = '<div class="processing"><span class="loading"></span>正在执行查询，请稍候...</div>';
+        }
+
+        // 发送查询
+        sendQueryBtn.addEventListener('click', async function () {
+            const query = queryInput.value.trim();
+            if (!query) return;
+
+            sendQueryBtn.disabled = true;
+            sendQueryBtn.innerHTML = '<span class="loading"></span>查询中...';
+            showProcessing();
+
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    body: query
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // resultBox.innerHTML = `<pre style="color: #3986ec;">${data.message}</pre>`;
+                    resultBox.innerHTML = marked.parse(data.message);
+                } else {
+                    resultBox.innerHTML = `<p style="color: #dc3545;">查询失败: ${data.message || '未知错误'}</p>`;
+                }
+            } catch (error) {
+                console.error('查询失败:', error);
+                resultBox.innerHTML = `<p style="color: #dc3545;">查询失败: ${error.message}</p>`;
+            } finally {
+                sendQueryBtn.disabled = false;
+                sendQueryBtn.textContent = '发送查询';
+            }
+        });
+    });
+</script>
+</body>
+</html>

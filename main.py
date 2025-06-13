@@ -1,14 +1,14 @@
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI, Request, Query, Body
+from fastapi import FastAPI, Request, Body
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from agent.agent import table_select_agent
 from schemas.db_conn_config import DatabaseConnectionConfig
 from utils.logger import logger
 from utils.test_connection import test_connection
-from fastapi.staticfiles import StaticFiles
 
 global_conn_config = None
 

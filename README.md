@@ -1,4 +1,4 @@
-# 数据库查询小助手
+# MySQL数据库查询小助手
 
 ## 介绍
 基于大模型的SQL查询小助手，输入任意查询内容，即可返回查询结果。
@@ -10,3 +10,7 @@
 ### 技术栈
 1. Web：FastAPI
 2. Agent：PydanticAI
+3. 环境管理：Poetry
+4. 图表生成：pyecharts
+5. 数据访问：aiomysql
+6. 模型：deepseek-v3

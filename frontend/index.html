@@ -332,6 +332,9 @@
             <div id="resultBox" class="result-box">
                 <p>查询结果将显示在这里...</p>
             </div>
+            <div id="chartContainer">
+
+            </div>
         </div>
     </div>
 </div>
@@ -424,6 +427,8 @@
 
             sendQueryBtn.disabled = true;
             sendQueryBtn.innerHTML = '<span class="loading"></span>查询中...';
+            document.getElementById('chartContainer').innerHTML = '';
+            document.getElementById('chartContainer').style.height = '0px';
             showProcessing();
 
             try {
@@ -436,7 +441,18 @@
 
                 if (data.success) {
                     // resultBox.innerHTML = `<pre style="color: #3986ec;">${data.message}</pre>`;
-                    resultBox.innerHTML = marked.parse(data.message);
+                    resultBox.innerHTML = marked.parse(data.message.data);
+
+                    if (data.message.chart) {
+                        const iframe = document.createElement('iframe');
+                        iframe.srcdoc = data.message.chart;  // 使用srcdoc属性直接设置HTML内容
+                        iframe.style.width = '100%';
+                        iframe.style.height = '100%';
+                        iframe.style.border = 'none';
+
+                        document.getElementById('chartContainer').appendChild(iframe);
+                        document.getElementById('chartContainer').style.height = '600px';
+                    }
                 } else {
                     resultBox.innerHTML = `<p style="color: #dc3545;">查询失败: ${data.message || '未知错误'}</p>`;
                 }

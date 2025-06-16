@@ -13,6 +13,7 @@ dependencies = [
     "loguru (>=0.7.3,<0.8.0)",
     "pydantic-ai-slim[openai] (>=0.2.16,<0.3.0)",
     "aiomysql (>=0.2.0,<0.3.0)",
+    "pyecharts (>=2.0.8,<3.0.0)",
 ]
 
 [tool.poetry]

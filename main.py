@@ -5,7 +5,8 @@ from fastapi import FastAPI, Request, Body
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from agent.agent import table_select_agent
+from agent.data_agent import data_agent
+from agent.echarts_agent import echarts_agent
 from schemas.db_conn_config import DatabaseConnectionConfig
 from utils.logger import logger
 from utils.test_connection import test_connection
@@ -69,8 +70,24 @@ async def query(query_text: str = Body(..., examples=["查询用户数"])):
     if not global_conn_config:
         return {"success": False, "message": "请先设置数据库连接"}
 
-    result = await table_select_agent.run(query_text, deps=global_conn_config)
-    return {"success": True, "message": result.output}
+    logger.info(f"用户查询内容: {query_text}")
+    data_agent_result = await data_agent.run(query_text, deps=global_conn_config)
+    data_details = data_agent_result.output
+
+    logger.info(f"数据智能体结果: {data_details}")
+
+    echarts_agent_result = None
+    if data_details.chart:
+        echarts_agent_result = await echarts_agent.run(
+            f"MarkDown数据描述：{data_details.markdown_describe} \n 生成的图表类型：{data_details.chart_type}"
+        )
+
+    result = {
+        "data": data_details.markdown_describe,
+        "chart": echarts_agent_result.output if echarts_agent_result else None,
+    }
+
+    return {"success": True, "message": result}
 
 
 # 静态页面

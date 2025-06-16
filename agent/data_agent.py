@@ -2,8 +2,9 @@ import re
 from typing import Any
 
 import aiomysql
-from pydantic_ai import Agent, settings, RunContext
+from pydantic_ai import Agent, settings, RunContext, ModelRetry
 
+from schemas.agent_output import DataDetails
 from schemas.db_conn_config import DatabaseConnectionConfig
 from utils.logger import logger
 
@@ -11,24 +12,26 @@ model_settings = settings.ModelSettings(
     temperature=0.0
 )
 
-table_select_agent = Agent(
+data_agent = Agent(
     'deepseek:deepseek-chat',
     deps_type=DatabaseConnectionConfig,
-    output_type=str,
+    output_type=DataDetails,
     system_prompt=(
         "你是一个数据库查询专家，你精通根据用户的问题来结合数据库表和字段信息生成对应的SQL，然后调用对应工具执行SQL，"
-        "最后你将SQL查询的结果结合用户的问题以简单易懂的语言输出。"
-        "数据库中所有表的描述信息可以通过工具来获取，如果获取到的结果是空或空字典等，直接输出“无法读取数据库信息。”"
+        "最后你将SQL查询的结果结合用户的问题以简单易懂的语言输出，并根据用户的问题判断要不要生成统计图表。"
+        "数据库中所有表的描述信息可以通过工具来获取，如果获取到的结果是空或空字典等，直接输出“无法读取数据库信息。”。"
         "SQL执行结果可以通过工具来获取，如果查询结果为空，直接输出“未能查询到相关结果。”"
         "要注意你输出的信息尽量便于阅读，例如永远用名称代替id输出，另外多行数据需要输出时你要用表格形式输出。"
-        "为了输出的美观性和易读性，你总是以MarkDown格式输出。"
-        "注意：一旦你遇到无法确定或无法解决的问题，或者遇到用户随意问了和数据查询不相干的问题，不要自我猜测，直接输出“抱歉，我不能帮你解决这个问题。”"
+        "为了输出的美观性和易读性，你总是以MarkDown格式输出答案，以Bool类型来输出是否需要生成统计图表，并尽量说明图表类型。"
+        "注意：除非用户的问题中明确表示需要生成统计图表，否则一律认为不需要生成统计图表（False），图表名称用中文输出。"
+        "注意：不要在MarkDown格式输出答案中包含和问题及答案无关的内容，如：我将生成图表。"
+        "注意：一旦你遇到无法确定或无法解决的问题，或者遇到用户随意问了和数据查询不相干的问题，不要自我猜测，直接输出“抱歉，我不能帮你解决这个问题。”。"
     ),
     model_settings=model_settings
 )
 
 
-@table_select_agent.tool
+@data_agent.tool
 async def get_db_tables_description(ctx: RunContext[DatabaseConnectionConfig]) -> dict[str, str | dict[str, str]]:
     """
     获取数据库中所有表和列信息（表名、列名、数据类型、列描述和表描述）
@@ -94,7 +97,7 @@ async def get_db_tables_description(ctx: RunContext[DatabaseConnectionConfig]) -
     return schema
 
 
-@table_select_agent.tool
+@data_agent.tool(retries=2)
 async def execute_sql(ctx: RunContext[DatabaseConnectionConfig], sql: str) -> list[dict[str, Any]] | None:
     """
     执行SQL查询并返回结果
@@ -103,6 +106,7 @@ async def execute_sql(ctx: RunContext[DatabaseConnectionConfig], sql: str) -> li
     :return:
         list: 查询结果列表
     """
+    logger.info(f"执行SQL查询：{sql}")
     result = None
 
     #  检查SQL中是否包含危险操作，但是字段中可能包含update，如update_time
@@ -135,5 +139,6 @@ async def execute_sql(ctx: RunContext[DatabaseConnectionConfig], sql: str) -> li
 
     except Exception as e:
         logger.error(e)
+        raise ModelRetry(f"SQL执行错误，错误信息：{e}。")
 
     return result

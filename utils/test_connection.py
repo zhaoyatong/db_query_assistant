@@ -28,8 +28,10 @@ async def test_connection(conn_config: DatabaseConnectionConfig) -> bool:
                     return False
 
     except aiomysql.Error as e:
+        logger.error(f"测试数据库链接发生错误: {e}")
         return False
     except asyncio.TimeoutError:
+        logger.error("测试数据库链接超时")
         return False
     except Exception as e:
         logger.error(f"测试数据库链接发生错误: {e}")

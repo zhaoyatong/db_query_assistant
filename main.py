@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request, Body
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from agent.data_agent import data_agent
+from agent.data_agent import data_agent, sql_dict
 from agent.echarts_agent import echarts_agent
 from schemas.db_conn_config import DatabaseConnectionConfig
 from utils.logger import logger
@@ -82,8 +82,16 @@ async def query(query_text: str = Body(..., examples=["查询用户数"])):
             f"MarkDown数据描述：{data_details.markdown_describe} \n 生成的图表类型：{data_details.chart_type}"
         )
 
+    data_text = (
+        f"{data_details.markdown_describe}"
+        f"\n"
+        f"---"
+        f"\n"
+        f"执行的SQL：{sql_dict.get('sql_text', '无')}"
+    )
+
     result = {
-        "data": data_details.markdown_describe,
+        "data": data_text,
         "chart": echarts_agent_result.output if echarts_agent_result else None,
     }
 

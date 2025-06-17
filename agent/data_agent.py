@@ -21,6 +21,7 @@ data_agent = Agent(
         "最后你将SQL查询的结果结合用户的问题以简单易懂的语言输出，并根据用户的问题判断要不要生成统计图表。"
         "数据库中所有表的描述信息可以通过工具来获取，如果获取到的结果是空或空字典等，直接输出“无法读取数据库信息。”。"
         "SQL执行结果可以通过工具来获取，如果查询结果为空，直接输出“未能查询到相关结果。”"
+        "若用户直接提供了SQL，直接调用SQL查询工具来执行提供的SQL。"
         "要注意你输出的信息尽量便于阅读，例如永远用名称代替id输出，另外多行数据需要输出时你要用表格形式输出。"
         "为了输出的美观性和易读性，你总是以MarkDown格式输出答案，以Bool类型来输出是否需要生成统计图表，并尽量说明图表类型。"
         "注意：除非用户的问题中明确表示需要生成统计图表，否则一律认为不需要生成统计图表（False），图表名称用中文输出。"
@@ -30,6 +31,8 @@ data_agent = Agent(
     model_settings=model_settings
 )
 
+
+sql_dict = {}
 
 @data_agent.tool
 async def get_db_tables_description(ctx: RunContext[DatabaseConnectionConfig]) -> dict[str, str | dict[str, str]]:
@@ -107,6 +110,9 @@ async def execute_sql(ctx: RunContext[DatabaseConnectionConfig], sql: str) -> li
         list: 查询结果列表
     """
     logger.info(f"执行SQL查询：{sql}")
+    sql_dict.clear()
+    sql_dict["sql_text"] = sql
+
     result = None
 
     #  检查SQL中是否包含危险操作，但是字段中可能包含update，如update_time

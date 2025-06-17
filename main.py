@@ -84,10 +84,10 @@ async def query(query_text: str = Body(..., examples=["查询用户数"])):
 
     data_text = (
         f"{data_details.markdown_describe}"
-        f"\n"
+        f"\n\n\n"
         f"---"
-        f"\n"
-        f"执行的SQL：{sql_dict.get('sql_text', '无')}"
+        f"\n\n\n"
+        f"执行的SQL：\n\n{sql_dict.get('sql_text', '无')}"
     )
 
     result = {
